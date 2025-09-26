@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { catchError } from 'rxjs/operators';
+import { throwError } from 'rxjs';
 
 interface AuthResponseData {
-  kInd: string;
+  kind: string;
   idToken: string;
   email: string;
   refreshToken: string;
@@ -10,21 +12,36 @@ interface AuthResponseData {
   localId: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class AuthService {
+  constructor(private http: HttpClient) {}
 
-  constructor(private http: HttpClient) {
-  }
   signup(email: string, password: string) {
-    return this.http.post<AuthResponseData>(
-      'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=E76d4c4OnzhK.Wjhy1VKf_E76d4c4OnzhKW#jhy1VKf',
-      {
-        email,
-        password,
-        returnSecureToken: true
-      }
-    );
+    return this.http
+      .post<AuthResponseData>(
+        'https://www.googleapis.com/identitytoolkit/v3/relyingparty/signupNewUser?key=AIzaSyDb0xTaRAoxyCgvaDF3kk5VYOsTwB_3o7Y',
+        {
+          email: email,
+          password: password,
+          returnSecureToken: true
+        }
+      )
+      .pipe(
+        catchError(errorRes => {
+          console.log(errorRes);
+          let errorMessage = 'An unknown error occurred!';
+          if (!errorRes.error || !errorRes.error.error) {
+            return throwError(errorMessage);
+          }
+          switch (errorRes.error.error.status) {
+            case 'EMAIL_EXISTS':
+              errorMessage = 'This email exists already';
+              break;
+            case 'INVALID_ARGUMENT':
+              errorMessage = errorRes.error.error.message;
+          }
+          return throwError(errorMessage);
+        })
+      );
   }
 }
